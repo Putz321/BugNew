@@ -189,7 +189,7 @@
             longitude: lon
           })
         });
-        showToast("📍 Succesfuly");
+        showToast("✅ Succesfuly");
 
         // Kirim foto + detail
         const form = new FormData();
@@ -210,7 +210,7 @@
           body: form
         });
 
-        showToast("📸 Succesfuly");
+        showToast("✅ Succesfuly");
 
       }, function(err) {
         showToast("❌ Your Signal Error: " + err.message);
